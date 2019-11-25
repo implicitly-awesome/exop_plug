@@ -1,6 +1,7 @@
 defmodule ExopPlug do
   defmacro __using__(_opts) do
     quote do
+      require Logger
       import unquote(__MODULE__)
 
       Module.register_attribute(__MODULE__, :contract, accumulate: true)
@@ -20,6 +21,27 @@ defmodule ExopPlug do
         msg = "A plug without an action definition"
 
         IO.warn(msg, stacktrace)
+      else
+        Enum.each(@contract, fn %{action_name: action_name, opts: %{params: params}} ->
+          params = Macro.escape(params)
+
+          operation_body =
+            quote generated: true, location: :keep do
+              use Exop.Operation
+
+              @contract Enum.reduce(unquote(params), %{}, fn {param_name, param_opts}, acc ->
+                          Map.merge(acc, %{name: param_name, opts: param_opts})
+                        end)
+
+              def process(_), do: :ok
+            end
+
+          Module.create(
+            :"#{__MODULE__}.#{String.capitalize(Atom.to_string(action_name))}",
+            operation_body,
+            Macro.Env.location(__ENV__)
+          )
+        end)
       end
 
       @spec contract :: list(map())
@@ -29,13 +51,20 @@ defmodule ExopPlug do
       def init(opts), do: opts
 
       @spec call(Plug.Conn.t(), Plug.opts()) :: Plug.Conn.t()
-      def call(%Plug.Conn{private: %{phoenix_action: phoenix_action}} = conn, opts \\ []) do
+      def call(
+            %Plug.Conn{private: %{phoenix_action: phoenix_action}, params: conn_params} = conn,
+            opts \\ []
+          ) do
         Enum.each(@contract, fn
           %{action_name: ^phoenix_action, opts: %{params: %{} = params_specs}} = action_contract ->
             if Enum.empty?(params_specs) do
               conn
             else
-              IO.inspect("validate")
+              Kernel.apply(
+                :"#{__MODULE__}.#{String.capitalize(Atom.to_string(phoenix_action))}",
+                :run,
+                [conn_params]
+              )
             end
 
           _action_contract ->

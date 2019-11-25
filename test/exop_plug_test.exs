@@ -25,6 +25,8 @@ defmodule ExopPlugTest do
   end
 
   test "sdf", %{conn: conn} do
+    # conn = Map.put(conn, :params, %{"user_id" => 1})
+    conn = Map.put(conn, :params, %{user_id: 1})
     MyPlug.call(conn, [])
   end
 end
