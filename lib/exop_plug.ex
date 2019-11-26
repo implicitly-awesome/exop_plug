@@ -33,7 +33,9 @@ defmodule ExopPlug do
                           Map.merge(acc, %{name: param_name, opts: param_opts})
                         end)
 
-              def process(_), do: :ok
+              parameter(:conn, struct: Plug.Conn)
+
+              def process(%{conn: conn}), do: conn
             end
 
           Module.create(
@@ -50,26 +52,39 @@ defmodule ExopPlug do
       @spec init(Plug.opts()) :: Plug.opts()
       def init(opts), do: opts
 
-      @spec call(Plug.Conn.t(), Plug.opts()) :: Plug.Conn.t()
+      @spec call(Plug.Conn.t(), Plug.opts()) :: Plug.Conn.t() | map()
       def call(
             %Plug.Conn{private: %{phoenix_action: phoenix_action}, params: conn_params} = conn,
             opts \\ []
           ) do
-        Enum.each(@contract, fn
-          %{action_name: ^phoenix_action, opts: %{params: %{} = params_specs}} = action_contract ->
-            if Enum.empty?(params_specs) do
-              conn
-            else
-              Kernel.apply(
-                :"#{__MODULE__}.#{String.capitalize(Atom.to_string(phoenix_action))}",
-                :run,
-                [conn_params]
-              )
-            end
+        operations_errors =
+          Enum.reduce(@contract, %{}, fn
+            %{action_name: ^phoenix_action, opts: %{params: %{} = params_specs}} = action_contract,
+            errors_acc ->
+              if Enum.empty?(params_specs) do
+                conn
+              else
+                operation_params = Map.put(conn_params, :conn, conn)
 
-          _action_contract ->
-            conn
-        end)
+                case Kernel.apply(
+                       :"#{__MODULE__}.#{String.capitalize(Atom.to_string(phoenix_action))}",
+                       :run,
+                       [operation_params]
+                     ) do
+                  {:ok, %Plug.Conn{} = conn} -> errors_acc
+                  {:error, _} = error -> Map.put(errors_acc, phoenix_action, error)
+                end
+              end
+
+            _action_contract, errors_acc ->
+              errors_acc
+          end)
+
+        if Enum.any?(operations_errors) do
+          operations_errors
+        else
+          conn
+        end
       end
     end
   end
