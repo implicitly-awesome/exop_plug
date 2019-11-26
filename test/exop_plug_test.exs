@@ -83,4 +83,27 @@ defmodule ExopPlugTest do
       assert ^conn = WithoutParamsPlug.call(conn, [])
     end
   end
+
+  describe "on_fail callback" do
+    defmodule OnFailPlug do
+      use ExopPlug
+
+      action(:show, params: %{user_id: [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
+
+      def on_fail(%{params: params} = _conn, :show, error), do: {params[:user_id], error}
+    end
+
+    test "a function specified in on_fail callback is called", %{conn: conn} do
+      invalid_params = %{user_id: "1"}
+
+      conn = Map.put(conn, :params, invalid_params)
+
+      assert capture_log(fn ->
+               assert {"1", {:error, {:validation, %{user_id: ["has wrong type"]}}}} =
+                        OnFailPlug.call(conn, [])
+             end) =~ "user_id: has wrong type"
+    end
+  end
+
+  # TODO: test with dublicated actions
 end

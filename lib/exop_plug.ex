@@ -52,38 +52,36 @@ defmodule ExopPlug do
       @spec init(Plug.opts()) :: Plug.opts()
       def init(opts), do: opts
 
-      @spec call(Plug.Conn.t(), Plug.opts()) :: Plug.Conn.t() | map()
+      @spec call(Plug.Conn.t(), Plug.opts()) :: Plug.Conn.t() | map() | any()
       def call(
             %Plug.Conn{private: %{phoenix_action: phoenix_action}, params: conn_params} = conn,
             opts \\ []
           ) do
-        operations_errors =
-          Enum.reduce(@contract, %{}, fn
-            %{action_name: ^phoenix_action, opts: %{params: %{} = params_specs}} = action_contract,
-            errors_acc ->
-              if Enum.empty?(params_specs) do
-                errors_acc
-              else
-                operation_params = Map.put(conn_params, :conn, conn)
-
-                case Kernel.apply(
-                       :"#{__MODULE__}.#{String.capitalize(Atom.to_string(phoenix_action))}",
-                       :run,
-                       [operation_params]
-                     ) do
-                  {:ok, %Plug.Conn{} = conn} -> errors_acc
-                  {:error, _} = error -> Map.put(errors_acc, phoenix_action, error)
-                end
-              end
-
-            _action_contract, errors_acc ->
-              errors_acc
+        %{opts: %{params: %{} = params_specs, on_fail: on_fail}} =
+          _action_contract =
+          Enum.find(@contract, fn
+            %{action_name: ^phoenix_action} -> true
+            _ -> false
           end)
 
-        if Enum.any?(operations_errors) do
-          operations_errors
-        else
+        if Enum.empty?(params_specs) do
           conn
+        else
+          operation_module = :"#{__MODULE__}.#{String.capitalize(Atom.to_string(phoenix_action))}"
+          operation_params = Map.put(conn_params, :conn, conn)
+          operation_result = Kernel.apply(operation_module, :run, [operation_params])
+
+          case operation_result do
+            {:ok, %Plug.Conn{} = conn} ->
+              conn
+
+            {:error, _} = error ->
+              if is_function(on_fail) do
+                on_fail.(conn, phoenix_action, error)
+              else
+                %{phoenix_action => error}
+              end
+          end
         end
       end
     end
@@ -91,23 +89,54 @@ defmodule ExopPlug do
 
   # TODO: add contracts types
   @spec action(atom() | binary(), keyword()) :: any()
-  defmacro action(action_name, opts \\ []) when is_atom(action_name) or is_binary(action_name) do
+  defmacro action(action_name, opts \\ [])
+           when (is_atom(action_name) or is_binary(action_name)) and is_list(opts) do
     quote generated: true, bind_quoted: [action_name: action_name, opts: opts] do
       opts = Enum.into(opts, %{})
-      params = Map.get(opts, :params, %{})
 
-      if Enum.empty?(params) do
-        file = String.to_charlist(__ENV__.file())
-        line = __ENV__.line()
-        stacktrace = [{__MODULE__, :init, 1, [file: file, line: line]}]
+      params = Map.get(opts, :params)
 
-        msg =
-          "`#{action_name}` action has been defined without params specification and will be omited during the validation"
+      params =
+        cond do
+          is_list(params) -> Enum.into(params, %{})
+          is_map(params) and Enum.empty?(params) -> :no_params
+          is_map(params) -> params
+          is_nil(params) -> :no_params
+        end
 
-        IO.warn(msg, stacktrace)
-      end
+      on_fail = Map.get(opts, :on_fail)
 
-      @contract %{action_name: action_name, opts: Map.put(opts, :params, params)}
+      on_fail =
+        cond do
+          is_function(on_fail) -> on_fail
+          true -> :no_on_fail
+        end
+
+      opts =
+        if params == :no_params do
+          file = String.to_charlist(__ENV__.file())
+          line = __ENV__.line()
+          stacktrace = [{__MODULE__, :init, 1, [file: file, line: line]}]
+
+          msg =
+            "`#{action_name}` action has been defined without params specification and will be omited during the validation"
+
+          IO.warn(msg, stacktrace)
+
+          Map.put(opts, :params, %{})
+        else
+          opts
+        end
+
+      opts =
+        if on_fail == :no_on_fail do
+          Map.put(opts, :on_fail, nil)
+        else
+          # TODO: check the callback func arity `on_fail.(conn, phoenix_action, error)`
+          opts
+        end
+
+      @contract %{action_name: action_name, opts: opts}
     end
   end
 end
