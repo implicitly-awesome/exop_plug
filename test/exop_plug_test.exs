@@ -4,7 +4,6 @@ defmodule ExopPlugTest do
   import ExUnit.CaptureLog
 
   setup do
-    # private.phoenix_controller && private.phoenix_action
     conn =
       Map.merge(%Plug.Conn{}, %{
         private: %{
@@ -21,8 +20,6 @@ defmodule ExopPlugTest do
       use ExopPlug
 
       action(:show, params: %{user_id: [type: :integer]})
-
-      # action :edit, params: %{user_id: [type: :integer], fields: [type: :map]}, on_fail: &__MODULE__.on_fail_func/2
     end
 
     test "returns Plug.Conn for valid params", %{conn: conn} do
@@ -105,5 +102,20 @@ defmodule ExopPlugTest do
     end
   end
 
-  # TODO: test with dublicated actions
+  describe "with duplicated action names" do
+    defmodule DuplicatedActionsPlug do
+      use ExopPlug
+
+      action(:show, params: %{user_id: [type: :integer]})
+      action(:show, params: %{user_id: [type: :string]})
+    end
+
+    test "uses the first action specification", %{conn: conn} do
+      valid_params = %{user_id: 1}
+
+      conn = Map.put(conn, :params, valid_params)
+
+      assert ^conn = DuplicatedActionsPlug.call(conn, [])
+    end
+  end
 end
