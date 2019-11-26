@@ -44,4 +44,43 @@ defmodule ExopPlugTest do
              end) =~ "user_id: has wrong type"
     end
   end
+
+  describe "with string param name" do
+    defmodule SimpleStringPlug do
+      use ExopPlug
+
+      action(:show, params: %{"user_id" => [type: :integer]})
+    end
+
+    test "returns Plug.Conn for valid params", %{conn: conn} do
+      valid_params = %{"user_id" => 1}
+
+      conn = Map.put(conn, :params, valid_params)
+
+      assert ^conn = SimpleStringPlug.call(conn, [])
+    end
+
+    test "returns errors map for invalid params", %{conn: conn} do
+      invalid_params = %{"user_id" => "1"}
+
+      conn = Map.put(conn, :params, invalid_params)
+
+      assert capture_log(fn ->
+               assert %{show: {error, {:validation, %{"user_id" => ["has wrong type"]}}}} =
+                        SimpleStringPlug.call(conn, [])
+             end) =~ "user_id: has wrong type"
+    end
+  end
+
+  describe "with actions without params" do
+    defmodule WithoutParamsPlug do
+      use ExopPlug
+
+      action(:show)
+    end
+
+    test "returns the conn", %{conn: conn} do
+      assert ^conn = WithoutParamsPlug.call(conn, [])
+    end
+  end
 end

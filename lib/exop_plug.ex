@@ -62,7 +62,7 @@ defmodule ExopPlug do
             %{action_name: ^phoenix_action, opts: %{params: %{} = params_specs}} = action_contract,
             errors_acc ->
               if Enum.empty?(params_specs) do
-                conn
+                errors_acc
               else
                 operation_params = Map.put(conn_params, :conn, conn)
 
@@ -102,7 +102,7 @@ defmodule ExopPlug do
         stacktrace = [{__MODULE__, :init, 1, [file: file, line: line]}]
 
         msg =
-          "`#{action_name}` action has been defined without params specification and was omited in the validation"
+          "`#{action_name}` action has been defined without params specification and will be omited during the validation"
 
         IO.warn(msg, stacktrace)
       end
