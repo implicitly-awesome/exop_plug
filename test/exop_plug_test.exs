@@ -103,19 +103,17 @@ defmodule ExopPlugTest do
   end
 
   describe "with duplicated action names" do
-    defmodule DuplicatedActionsPlug do
-      use ExopPlug
+    test "raises compile-time error" do
+      assert_raise CompileError,
+                   ~r"`show` action is duplicated",
+                   fn ->
+                     defmodule DuplicatedActionsPlug do
+                       use ExopPlug
 
-      action(:show, params: %{user_id: [type: :integer]})
-      action(:show, params: %{user_id: [type: :string]})
-    end
-
-    test "uses the first action specification", %{conn: conn} do
-      valid_params = %{user_id: 1}
-
-      conn = Map.put(conn, :params, valid_params)
-
-      assert ^conn = DuplicatedActionsPlug.call(conn, [])
+                       action(:show, params: %{user_id: [type: :integer]})
+                       action(:show, params: %{user_id: [type: :string]})
+                     end
+                   end
     end
   end
 end

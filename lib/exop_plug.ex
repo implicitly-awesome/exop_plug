@@ -101,11 +101,9 @@ defmodule ExopPlug do
       if already_has_action? do
         file = String.to_charlist(__ENV__.file())
         line = __ENV__.line()
-        stacktrace = [{__MODULE__, :action, 2, [file: file, line: line]}]
-
         msg = "`#{action_name}` action is duplicated"
 
-        IO.warn(msg, stacktrace)
+        raise CompileError, file: file, line: line, description: msg
       else
         opts = Enum.into(opts, %{})
 
