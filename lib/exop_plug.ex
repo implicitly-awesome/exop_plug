@@ -92,6 +92,10 @@ defmodule ExopPlug do
   defmacro action(action_name, opts \\ [])
            when (is_atom(action_name) or is_binary(action_name)) and is_list(opts) do
     quote generated: true, bind_quoted: [action_name: action_name, opts: opts] do
+      file = String.to_charlist(__ENV__.file())
+      line = __ENV__.line()
+      stacktrace = [{__MODULE__, :action, 2, [file: file, line: line]}]
+
       already_has_action? =
         Enum.any?(@contract, fn
           %{action_name: ^action_name} -> true
@@ -99,54 +103,60 @@ defmodule ExopPlug do
         end)
 
       if already_has_action? do
-        file = String.to_charlist(__ENV__.file())
-        line = __ENV__.line()
-        msg = "`#{action_name}` action is duplicated"
-
-        raise CompileError, file: file, line: line, description: msg
+        raise(CompileError,
+          file: file,
+          line: line,
+          description: "`#{action_name}` action is duplicated"
+        )
       else
         opts = Enum.into(opts, %{})
 
-        params = Map.get(opts, :params)
+        params = Map.get(opts, :params, :nothing)
 
         params =
           cond do
+            is_list(params) and Enum.empty?(params) -> :nothing
             is_list(params) -> Enum.into(params, %{})
-            is_map(params) and Enum.empty?(params) -> :no_params
+            is_map(params) and Enum.empty?(params) -> :nothing
             is_map(params) -> params
-            is_nil(params) -> :no_params
-          end
-
-        on_fail = Map.get(opts, :on_fail)
-
-        on_fail =
-          cond do
-            is_function(on_fail) -> on_fail
-            true -> :no_on_fail
+            true -> :nothing
           end
 
         opts =
-          if params == :no_params do
-            file = String.to_charlist(__ENV__.file())
-            line = __ENV__.line()
-            stacktrace = [{__MODULE__, :action, 2, [file: file, line: line]}]
-
-            msg =
-              "`#{action_name}` action has been defined without params specification and will be omited during the validation"
-
-            IO.warn(msg, stacktrace)
+          if params == :nothing do
+            IO.warn(
+              "`#{action_name}` action has been defined without params specification and will be omited during the validation",
+              stacktrace
+            )
 
             Map.put(opts, :params, %{})
           else
             opts
           end
 
+        on_fail = Map.get(opts, :on_fail, :nothing)
+
         opts =
-          if on_fail == :no_on_fail do
-            Map.put(opts, :on_fail, nil)
-          else
-            # TODO: check the callback func arity `on_fail.(conn, phoenix_action, error)`
-            opts
+          cond do
+            on_fail == :nothing ->
+              Map.put(opts, :on_fail, nil)
+
+            is_function(on_fail) && on_fail |> Function.info() |> Keyword.get(:arity, 0) == 3 ->
+              opts
+
+            is_function(on_fail) ->
+              raise(CompileError,
+                file: file,
+                line: line,
+                description: "`#{action_name}` action's `on_fail` callback should have arity = 3"
+              )
+
+            true ->
+              raise(CompileError,
+                file: file,
+                line: line,
+                description: "`#{action_name}` action's `on_fail` callback is not a function"
+              )
           end
 
         @contract %{action_name: action_name, opts: opts}

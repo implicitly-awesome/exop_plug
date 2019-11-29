@@ -100,6 +100,37 @@ defmodule ExopPlugTest do
                         OnFailPlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
+
+    test "raises compile-time error if callback is not a function" do
+      assert_raise CompileError,
+                   ~r"`show` action's `on_fail` callback is not a function",
+                   fn ->
+                     defmodule OnFailPlug2 do
+                       use ExopPlug
+
+                       action(:show, params: %{user_id: [type: :integer]}, on_fail: :on_fail)
+                     end
+                   end
+    end
+
+    test "raises compile-time error if callback has invalid arity" do
+      assert_raise CompileError,
+                   ~r"`show` action's `on_fail` callback should have arity = 3",
+                   fn ->
+                     defmodule OnFailPlug3 do
+                       use ExopPlug
+
+                       action(:show,
+                         params: %{user_id: [type: :integer]},
+                         on_fail: &__MODULE__.on_fail/2
+                       )
+
+                       def on_fail(%{params: params} = _conn, error) do
+                         {params[:user_id], error}
+                       end
+                     end
+                   end
+    end
   end
 
   describe "with duplicated action names" do
