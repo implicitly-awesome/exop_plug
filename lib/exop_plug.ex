@@ -87,7 +87,6 @@ defmodule ExopPlug do
     end
   end
 
-  # TODO: add contracts types
   @spec action(atom() | binary(), keyword()) :: any()
   defmacro action(action_name, opts \\ [])
            when (is_atom(action_name) or is_binary(action_name)) and is_list(opts) do
