@@ -57,12 +57,17 @@ defmodule ExopPlug do
             %Plug.Conn{private: %{phoenix_action: phoenix_action}, params: conn_params} = conn,
             opts \\ []
           ) do
-        %{opts: %{params: %{} = params_specs, on_fail: on_fail}} =
-          _action_contract =
+        action_contract =
           Enum.find(@contract, fn
             %{action_name: ^phoenix_action} -> true
             _ -> false
           end)
+
+        {params_specs, on_fail} =
+          case action_contract do
+            %{opts: %{params: %{} = params_specs, on_fail: on_fail}} -> {params_specs, on_fail}
+            _ -> {[], nil}
+          end
 
         if Enum.empty?(params_specs) do
           conn

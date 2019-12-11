@@ -147,4 +147,32 @@ defmodule ExopPlugTest do
                    end
     end
   end
+
+  describe "with actions which are not specified in a contract" do
+    defmodule SimplePlug2 do
+      use ExopPlug
+
+      action(:show, params: %{user_id: [type: :integer]})
+    end
+
+    setup %{conn: conn} do
+      conn =
+        Map.merge(conn, %{
+          private: %{
+            phoenix_controller: MyApp.SomeController,
+            phoenix_action: :index
+          }
+        })
+
+      {:ok, conn: conn}
+    end
+
+    test "skips such actions", %{conn: conn} do
+      valid_params = %{user_id: 1}
+
+      conn = Map.put(conn, :params, valid_params)
+
+      assert ^conn = SimplePlug2.call(conn, [])
+    end
+  end
 end
