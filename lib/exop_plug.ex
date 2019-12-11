@@ -1,7 +1,6 @@
 defmodule ExopPlug do
   defmacro __using__(_opts) do
     quote do
-      require Logger
       import unquote(__MODULE__)
 
       Module.register_attribute(__MODULE__, :contract, accumulate: true)
