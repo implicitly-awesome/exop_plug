@@ -36,7 +36,7 @@ defmodule ExopPlugTest do
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert %{show: {error, {:validation, %{user_id: ["has wrong type"]}}}} =
+               assert %{show: {:error, {:validation, %{user_id: ["has wrong type"]}}}} =
                         SimplePlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
@@ -63,7 +63,7 @@ defmodule ExopPlugTest do
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert %{show: {error, {:validation, %{"user_id" => ["has wrong type"]}}}} =
+               assert %{show: {:error, {:validation, %{"user_id" => ["has wrong type"]}}}} =
                         SimpleStringPlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
@@ -90,14 +90,15 @@ defmodule ExopPlugTest do
       def on_fail(%{params: params} = _conn, :show, error), do: {params[:user_id], error}
     end
 
-    test "a function specified in on_fail callback is called", %{conn: conn} do
+    test "a function specified in on_fail callback is called with validation errors map", %{
+      conn: conn
+    } do
       invalid_params = %{user_id: "1"}
 
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert {"1", {:error, {:validation, %{user_id: ["has wrong type"]}}}} =
-                        OnFailPlug.call(conn, [])
+               assert {"1", %{user_id: ["has wrong type"]}} = OnFailPlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
 

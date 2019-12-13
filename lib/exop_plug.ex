@@ -79,9 +79,9 @@ defmodule ExopPlug do
             {:ok, %Plug.Conn{} = conn} ->
               conn
 
-            {:error, _} = error ->
+            {:error, {:validation, errors_map}} = error ->
               if is_function(on_fail) do
-                on_fail.(conn, phoenix_action, error)
+                on_fail.(conn, phoenix_action, errors_map)
               else
                 %{phoenix_action => error}
               end
