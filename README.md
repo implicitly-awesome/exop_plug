@@ -5,6 +5,21 @@ of your Phoenix application's controllers by providing you small but useful DSL
 which makes as little magic behind the scenes as possible leaves you all the control
 under HTTP request.
 
+## Table of Contents
+
+[CHANGELOG](https://github.com/madeinussr/exop_plug/blob/master/CHANGELOG.md)
+
+- [Installation](#installation)
+- [How it works](#how-it-works)
+- [Step-by-step](#step-by-step)
+  - [1. create a plug](#1-create-a-plug)
+  - [2. in a controller](#2-in-a-controller)
+- [More examples](#more-examples)
+  - [coercing](#coercing)
+  - [respond directly from `on_fail` callback](#respond-directly-from-on_fail-callback)
+  - [rely on `action_fallback`](#rely-on-action_fallback)
+- [LICENSE](#license)
+
 ## Installation
 
 ```elixir
@@ -86,4 +101,81 @@ Now, if you receive invalid parameters for your `show` you get (for example)
 
 ## More examples
 
+The power of ExopPlug actually is provided by Exop and its validation capabilities.
+Basically, every check you use in Exop you can apply for an action's parameter in your plug.
 
+Below I put a couple of examples just in order to show different checks and things you can do with
+a parameter or validation errors.
+
+
+### coercing
+
+In the example above there is one tricky thing which I've just omit for the sake of example:
+with `get '/user/:user_id'` route you'll get `user_id` parameter as string, always, because it is
+path parameter.
+
+But you can coerce it before the validation:
+
+```elixir
+action(:show, params: %{"id" => [type: :integer, coerce_with: &__MODULE__.coerce_integer/2]})
+
+def coerce_integer({_, param_value}, _) when is_binary(param_value) do
+  {integer, ""} = Integer.parse(param_value)
+  integer
+end
+```
+
+_(and again: read more about `:coerce_with` option in Exop [docs](https://github.com/madeinussr/exop))_
+
+### respond directly from `on_fail` callback
+
+It might be useful not to assign validation errors to a connection, but respond immediately:
+
+```elixir
+action(:show, params: %{"id" => [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
+
+def on_fail(conn, action_name, errors_map) do
+  response = %{
+    action: action_name,
+    errors: errors_map
+  }
+
+  Phoenix.Controller.json(conn, response)
+end
+```
+
+### rely on `action_fallback`
+
+After assigning errors to a connection you can later pattern-match it in a controller's action
+and invoke your `action_fallback`'s fallback controller:
+
+```elixir
+# in a plug ...
+
+action(:show, params: %{"id" => [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
+
+def on_fail(conn, action_name, errors_map) do
+  Plug.Conn.assign(conn, :errors, errors_map)
+end
+
+# in a controller ...
+
+action_fallback MyAppWeb.FallbackController
+
+def show(%Plug.Conn{assigns: %{errors: errors_map}}, _params) do
+  {:error, errors_map}
+end
+
+# in the fallback controller ...
+
+def call(conn, {:error, errors_map}) do
+  json(conn, errors_map)
+end
+```
+
+## LICENSE
+
+    Copyright © 2016 - 2019 Andrey Chernykh ( andrei.chernykh@gmail.com )
+
+    This work is free. You can redistribute it and/or modify it under the
+    terms of the MIT License. See the LICENSE file for more details.
