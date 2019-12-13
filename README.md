@@ -41,23 +41,49 @@ explicitly in an action definition)_
 ### 1. create a plug
 
 Create a new module plug and define actions with parameters you want to validate.
-A parameter's validations specification is the same as Exop has.
-You can check it [here](https://github.com/madeinussr/exop#parameter-checks)
-along with available checks (validations).
+A parameter's validations are the same as Exop has for an operation parameter checks.
+You can find all them [here](https://github.com/madeinussr/exop#parameter-checks)
+along with other features like coercion.
 
 ```elixir
 defmodule MyAppWeb.UserControllerPlug do
   use ExopPlug
 
-  action(:show, params: %{"id" => [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
+  action(:show, params: %{"id" => [type: :string, length: %{min: 5}]}, on_fail: &__MODULE__.on_fail/3)
 
-  def on_fail(conn, action_name, {:error, {:validation, errors_map}} = errors) do
-    Plug.Conn.assign(conn, :errors, errors)
+  def on_fail(conn, action_name, errors_map) do
+    Plug.Conn.assign(conn, :errors, errors_map)
   end
 end
-
 ```
+
+Here we also defined an `on_fail` callback. This 3-arity function is called when an action's parameters
+failed the specified validation.
 
 ### 2. in a controller
 
-Open your controller which actions parameters you'd like to validate and add
+Simply add `plug MyAppWeb.UserControllerPlug` at the top of your controller.
+
+```elixir
+defmodule MyAppWeb.UserController do
+  use MyAppWeb, :controller
+
+  plug MyAppWeb.UserControllerPlug
+
+  # ...
+
+  def show(conn, params) do
+    json(conn, params)
+  end
+
+  # ...
+end
+```
+
+Now, if you receive invalid parameters for your `show` you get (for example)
+`errors: %{"id" => ["has wrong type"]}}` within your `Plug.Conn` assigns
+(as you earlier specified in your plug). And then it is up to you how to deal with this errors map.
+
+## More examples
+
+
