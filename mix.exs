@@ -29,7 +29,8 @@ defmodule ExopPlug.MixProject do
   defp deps do
     [
       {:plug, "~> 1.8"},
-      {:exop, "~> 1.3.4"}
+      {:exop, "~> 1.3.4"},
+      {:ex_doc, "~> 0.20", only: [:dev, :test, :docs]}
     ]
   end
 
