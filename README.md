@@ -16,8 +16,8 @@ under HTTP request.
   - [2. in a controller](#2-in-a-controller)
 - [More examples](#more-examples)
   - [coercing](#coercing)
-  - [respond directly from `on_fail` callback](#respond-directly-from-on_fail-callback)
   - [rely on `action_fallback`](#rely-on-action_fallback)
+  - [respond directly from `on_fail` callback](#respond-directly-from-on_fail-callback)
 - [LICENSE](#license)
 
 ## Installation
@@ -127,23 +127,6 @@ end
 
 _(and again: read more about `:coerce_with` option in Exop [docs](https://github.com/madeinussr/exop))_
 
-### respond directly from `on_fail` callback
-
-It might be useful not to assign validation errors to a connection, but respond immediately:
-
-```elixir
-action(:show, params: %{"id" => [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
-
-def on_fail(conn, action_name, errors_map) do
-  response = %{
-    action: action_name,
-    errors: errors_map
-  }
-
-  Phoenix.Controller.json(conn, response)
-end
-```
-
 ### rely on `action_fallback`
 
 After assigning errors to a connection you can later pattern-match it in a controller's action
@@ -170,6 +153,23 @@ end
 
 def call(conn, {:error, errors_map}) do
   json(conn, errors_map)
+end
+```
+
+### respond directly from `on_fail` callback
+
+It might be useful not to assign validation errors to a connection, but respond immediately:
+
+```elixir
+action(:show, params: %{"id" => [type: :integer]}, on_fail: &__MODULE__.on_fail/3)
+
+def on_fail(conn, action_name, errors_map) do
+  response = %{
+    action: action_name,
+    errors: errors_map
+  }
+
+  Phoenix.Controller.json(conn, response)
 end
 ```
 
