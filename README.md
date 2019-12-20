@@ -1,3 +1,5 @@
+[![Hex.pm](https://img.shields.io/hexpm/v/exop_plug.svg)](https://hex.pm/packages/exop_plug) [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](http://hexdocs.pm/exop_plug/) [![Build Status](https://travis-ci.org/madeinussr/exop_plug.svg?branch=master)](https://travis-ci.org/madeinussr/exop_plug)
+
 # ExopPlug
 
 This library provides a convenient way to validate incoming parameters
