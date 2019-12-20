@@ -1,4 +1,69 @@
 defmodule ExopPlug do
+  @moduledoc """
+  Offers a simple DSL to define a plug with number of actions and parameters with validation checks.
+  Then you use this plug in corresponding controller and that's it: once HTTP request comes,
+  your controller's plug takes an action: it figures out whether this particular HTTP request's
+  parameters should be validated or not, and if yes - validates them.
+
+  If parameters pass the validation ExopPlug returns `Plug.Conn` (as usual plug does),
+  if not - it returns an error-tuple as described [here](https://github.com/madeinussr/exop#operation-results).
+
+  ExopPlug doesn't transform your HTTP request nor `Plug.Conn.t()` structure.
+  So, if you define `get '/user/:user_id'` in your router you receive `%{"user_id" => "1"}` for
+  the request `http://localhost:4000/user/1`. There is no any coercion or type inference done
+  under the scenes.
+
+  ## Example
+
+      # your plug
+      defmodule MyAppWeb.UserControllerPlug do
+        use ExopPlug
+
+        action(:show, params: %{"id" => [type: :string, length: %{min: 5}]})
+      end
+
+      # in your controller
+      defmodule MyAppWeb.UserController do
+        use MyAppWeb, :controller
+
+        plug MyAppWeb.UserControllerPlug
+
+        # ...
+
+        def show(conn, params) do
+          json(conn, params)
+        end
+
+        # ...
+      end
+
+  ## action options
+
+  Apart from mandatory `:params` option with which you define an action parameters checks,
+  you are able to use other additional options:
+
+  - `:on_fail` - with this option you specify a callback function which is invoked if a parameter
+  fails your validation
+
+  Example:
+
+      defmodule MyAppWeb.UserControllerPlug do
+        use ExopPlug
+
+        action(:show, params: %{"id" => [type: :string]}, on_fail: &__MODULE__.on_fail/3)
+
+        def on_fail(conn, action_name, errors_map) do
+          Plug.Conn.assign(conn, :errors, errors_map)
+        end
+      end
+
+  ## Exop parameter options
+
+  When you're defining your action's checks you already have a number of useful checks and options
+  which come with Exop, for example, `:coerce_with` may be very useful. Check Exop [docs](https://github.com/madeinussr/exop)
+  to find out more available options.
+  """
+
   defmacro __using__(_opts) do
     quote do
       import unquote(__MODULE__)
@@ -91,6 +156,7 @@ defmodule ExopPlug do
     end
   end
 
+  @doc "Defines incoming parameters validation for your Phoenix controller's action."
   @spec action(atom() | binary(), keyword()) :: any()
   defmacro action(action_name, opts \\ [])
            when (is_atom(action_name) or is_binary(action_name)) and is_list(opts) do

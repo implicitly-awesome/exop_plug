@@ -3,7 +3,7 @@
 # ExopPlug
 
 This library provides a convenient way to validate incoming parameters
-of your Phoenix application's controllers by providing you small but useful DSL
+of your Phoenix application's controllers by offering you small but useful DSL
 which makes as little magic behind the scenes as possible leaves you all the control
 under HTTP request.
 
