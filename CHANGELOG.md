@@ -1,3 +1,3 @@
-## [1.0.0] - yyyy.MM.dd
+## [1.0.0] - 2019.12.20
 
-- initial basic, but powerful features provided :)
+- initial basic, but powerful features delivered :)
