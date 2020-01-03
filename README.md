@@ -177,7 +177,7 @@ end
 
 ## LICENSE
 
-    Copyright © 2016 - 2019 Andrey Chernykh ( andrei.chernykh@gmail.com )
+    Copyright © 2019 - 2020 Andrey Chernykh ( andrei.chernykh@gmail.com )
 
     This work is free. You can redistribute it and/or modify it under the
     terms of the MIT License. See the LICENSE file for more details.
