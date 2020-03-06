@@ -26,7 +26,10 @@ under HTTP request.
 
 ```elixir
 def deps do
-  [{:exop_plug, "~> 1.0.0"}]
+  [
+    {:exop, "~> 1.4"},
+    {:exop_plug, "~> 1.1"}
+  ]
 end
 ```
 
