@@ -3,6 +3,7 @@ language: elixir
 elixir:
   - 1.8.0
   - 1.9.0
+  - 1.10.0
 otp_release:
   - 19.0
   - 20.0
@@ -10,7 +11,5 @@ otp_release:
   - 22.0
 matrix:
   exclude:
-    - elixir: 1.8.0
-      otp_release: 19.0
     - elixir: 1.9.0
       otp_release: 19.0
