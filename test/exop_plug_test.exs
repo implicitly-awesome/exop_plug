@@ -36,8 +36,12 @@ defmodule ExopPlugTest do
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert %{show: {:error, {:validation, %{user_id: ["has wrong type"]}}}} =
-                        SimplePlug.call(conn, [])
+               assert %{
+                        show:
+                          {:error,
+                           {:validation,
+                            %{user_id: ["has wrong type; expected type: integer, got: \"1\""]}}}
+                      } = SimplePlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
   end
@@ -63,8 +67,12 @@ defmodule ExopPlugTest do
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert %{show: {:error, {:validation, %{"user_id" => ["has wrong type"]}}}} =
-                        SimpleStringPlug.call(conn, [])
+               assert %{
+                        show:
+                          {:error,
+                           {:validation,
+                            %{"user_id" => ["has wrong type; expected type: integer, got: \"1\""]}}}
+                      } = SimpleStringPlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
   end
@@ -98,7 +106,8 @@ defmodule ExopPlugTest do
       conn = Map.put(conn, :params, invalid_params)
 
       assert capture_log(fn ->
-               assert {"1", %{user_id: ["has wrong type"]}} = OnFailPlug.call(conn, [])
+               assert {"1", %{user_id: ["has wrong type; expected type: integer, got: \"1\""]}} =
+                        OnFailPlug.call(conn, [])
              end) =~ "user_id: has wrong type"
     end
 

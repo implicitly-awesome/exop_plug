@@ -11,7 +11,7 @@ defmodule ExopPlug.MixProject do
   def project do
     [
       app: :exop_plug,
-      version: "1.0.0",
+      version: "1.1.0",
       elixir: "~> 1.8",
       name: "ExopPlug",
       description: @description,
@@ -29,7 +29,7 @@ defmodule ExopPlug.MixProject do
   defp deps do
     [
       {:plug, "~> 1.8"},
-      {:exop, "~> 1.3.4"},
+      {:exop, "~> 1.4", only: [:test]},
       {:ex_doc, "~> 0.20", only: [:dev, :test, :docs]}
     ]
   end
